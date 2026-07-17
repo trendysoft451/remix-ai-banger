@@ -1,0 +1,35 @@
+# Variante toujours active recommandée pour une Action GPT en production.
+# Renommez ce fichier en render.yaml avant le premier push si vous acceptez un service Render payant.
+services:
+  - type: web
+    name: remix-banger-gpt-action
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: GPT_ACTION_API_KEY
+        generateValue: true
+      - key: MOCK_MODE
+        value: "true"
+      - key: MOCK_DELAY_MS
+        value: "5000"
+      - key: ALLOWED_FILE_HOSTS
+        value: files.oaiusercontent.com
+      - key: ALLOW_ANY_FILE_URL
+        value: "false"
+      - key: MAX_AUDIO_BYTES
+        value: "52428800"
+      - key: FILE_DOWNLOAD_TIMEOUT_MS
+        value: "20000"
+      - key: PROVIDER_TIMEOUT_MS
+        value: "35000"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"
+      - key: RETURN_FILE_TO_CHATGPT
+        value: "false"

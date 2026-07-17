@@ -1,0 +1,196 @@
+openapi: 3.1.0
+info:
+  title: Remix Banger Professional API
+  description: Démarre un remix professionnel à partir d'un fichier audio de la conversation et suit son avancement.
+  version: 2.0.0
+servers:
+  - url: __PUBLIC_BASE_URL__
+    description: API Remix Banger déployée sur Render.
+security:
+  - ApiKeyAuth: []
+paths:
+  /health:
+    get:
+      operationId: getRemixApiHealth
+      summary: Vérifier la disponibilité de l'API
+      security: []
+      x-openai-isConsequential: false
+      responses:
+        "200":
+          description: API disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, service, mode]
+                properties:
+                  ok:
+                    type: boolean
+                  service:
+                    type: string
+                  mode:
+                    type: string
+                    enum: [mock, provider]
+  /v1/remixes/professional:
+    post:
+      operationId: startProfessionalRemix
+      summary: Démarrer un remix professionnel
+      description: Utilise exactement un fichier audio de la conversation et retourne rapidement un identifiant de tâche.
+      x-openai-isConsequential: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartProfessionalRemixRequest"
+      responses:
+        "202":
+          description: Tâche acceptée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemixJob"
+        "400":
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Clé API invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Trop de requêtes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Fournisseur non configuré ou indisponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/remixes/{jobId}:
+    get:
+      operationId: getProfessionalRemixStatus
+      summary: Consulter l'état d'un remix
+      description: Retourne la progression et l'URL du rendu lorsqu'il est terminé.
+      x-openai-isConsequential: false
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: Identifiant retourné par startProfessionalRemix.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: État de la tâche
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemixJob"
+        "401":
+          description: Clé API invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Tâche inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    StartProfessionalRemixRequest:
+      type: object
+      additionalProperties: false
+      required: [openaiFileIdRefs, style]
+      properties:
+        openaiFileIdRefs:
+          type: array
+          minItems: 1
+          maxItems: 1
+          description: Exactement un fichier audio MP3, WAV, M4A, AAC, FLAC ou OGG provenant de la conversation.
+          items:
+            type: string
+        style:
+          type: string
+          minLength: 2
+          maxLength: 200
+          description: Style cible précis, par exemple afro house, melodic techno, amapiano ou drum and bass.
+        bpm:
+          type: integer
+          minimum: 50
+          maximum: 220
+          description: Tempo cible facultatif.
+        musicalKey:
+          type: string
+          maxLength: 20
+          description: Tonalité cible facultative, par exemple A minor, C# major ou Fm.
+        intensity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 7
+        preserveVocals:
+          type: boolean
+          default: true
+        durationSeconds:
+          type: integer
+          minimum: 15
+          maximum: 600
+        notes:
+          type: string
+          maxLength: 1000
+    RemixJob:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        message:
+          type: string
+        outputUrl:
+          type: string
+          format: uri
+        openaiFileResponse:
+          type: array
+          description: URL publique optionnelle du fichier final.
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
